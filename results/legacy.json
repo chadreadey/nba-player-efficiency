@@ -1,0 +1,649 @@
+{
+  "source": "legacy",
+  "dataset": {
+    "slug": "drgilermo/nba-players-stats",
+    "version": 2,
+    "sha256": "04876c15d43bf65734e60321207d9d5567c091e6cd37a4bbfe719945cca6e7e4"
+  },
+  "test_from": 2013,
+  "next_season_design": {
+    "test_windows": [
+      [
+        2003,
+        2007
+      ],
+      [
+        2008,
+        2012
+      ],
+      [
+        2013,
+        2017
+      ]
+    ],
+    "cv": "3 rolling-origin folds of 2 seasons before each window",
+    "hgb_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  "seed": 1,
+  "python": "3.12.15",
+  "sklearn": "1.9.1",
+  "generated_unix": 1793005570,
+  "results": [
+    {
+      "experiment": "replicate",
+      "model": "train mean",
+      "split": "random 80/20 (notebook)",
+      "n_train": 11668,
+      "n_test": 2917,
+      "mae": 3.6295,
+      "r2": -0.0007,
+      "target_sd": 4.804,
+      "sample": "1980-2017 after dropna",
+      "rows_from_traded_player_seasons": 3537
+    },
+    {
+      "experiment": "replicate",
+      "model": "hist gradient boosting",
+      "split": "random 80/20 (notebook)",
+      "n_train": 11668,
+      "n_test": 2917,
+      "mae": 0.4029,
+      "r2": 0.9836,
+      "target_sd": 4.804,
+      "sample": "1980-2017 after dropna",
+      "rows_from_traded_player_seasons": 3537
+    },
+    {
+      "experiment": "box_score_only",
+      "model": "linear regression",
+      "split": "train <2013, test >=2013",
+      "n_train": 10879,
+      "n_test": 1996,
+      "mae": 1.3199,
+      "r2": 0.8879,
+      "target_sd": 4.44,
+      "mae_ci95": [
+        1.2853,
+        1.3539
+      ],
+      "features": "per-36 box-score counts + season"
+    },
+    {
+      "experiment": "box_score_only",
+      "model": "hist gradient boosting",
+      "split": "train <2013, test >=2013",
+      "n_train": 10879,
+      "n_test": 1996,
+      "mae": 0.8696,
+      "r2": 0.9393,
+      "target_sd": 4.44,
+      "mae_ci95": [
+        0.8377,
+        0.904
+      ],
+      "features": "per-36 box-score counts + season"
+    },
+    {
+      "experiment": "same_season_oot",
+      "model": "train mean",
+      "split": "train <2013, test >=2013",
+      "n_train": 10879,
+      "n_test": 1996,
+      "mae": 3.4482,
+      "r2": -0.0023,
+      "target_sd": 4.44,
+      "mae_ci95": [
+        3.2435,
+        3.6594
+      ]
+    },
+    {
+      "experiment": "same_season_oot",
+      "model": "hist gradient boosting (notebook features)",
+      "split": "train <2013, test >=2013",
+      "n_train": 10879,
+      "n_test": 1996,
+      "mae": 0.3895,
+      "r2": 0.985,
+      "target_sd": 4.44,
+      "mae_ci95": [
+        0.3681,
+        0.412
+      ]
+    },
+    {
+      "experiment": "same_season_oot",
+      "model": "hist gradient boosting (without BPM/WS/VORP)",
+      "split": "train <2013, test >=2013",
+      "n_train": 10879,
+      "n_test": 1996,
+      "mae": 0.5991,
+      "r2": 0.9684,
+      "target_sd": 4.44,
+      "mae_ci95": [
+        0.5721,
+        0.625
+      ]
+    },
+    {
+      "experiment": "next_season",
+      "model": "baseline: last-season PER",
+      "split": "test 2003-2007; CV folds 1997-1998, 1999-2000, 2001-2002",
+      "n_train": 5272,
+      "n_test": 1439,
+      "mae": 2.3343,
+      "r2": 0.0788,
+      "target_sd": 4.189,
+      "mae_ci95": [
+        2.1821,
+        2.5199
+      ],
+      "mae_minus_marcel_ci95": [
+        0.2686,
+        0.1314,
+        0.4493
+      ],
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season",
+      "model": "Marcel-style weighted PER (tuned)",
+      "split": "test 2003-2007; CV folds 1997-1998, 1999-2000, 2001-2002",
+      "n_train": 5272,
+      "n_test": 1439,
+      "mae": 2.0657,
+      "r2": 0.612,
+      "target_sd": 4.189,
+      "mae_ci95": [
+        1.9809,
+        2.1539
+      ],
+      "mae_minus_marcel_ci95": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "params": {
+        "ballast_mp": 2000
+      },
+      "val_mae": 1.9707,
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season",
+      "model": "ridge (tuned)",
+      "split": "test 2003-2007; CV folds 1997-1998, 1999-2000, 2001-2002",
+      "n_train": 5272,
+      "n_test": 1439,
+      "mae": 1.9633,
+      "r2": 0.5917,
+      "target_sd": 4.189,
+      "mae_ci95": [
+        1.8697,
+        2.0665
+      ],
+      "mae_minus_marcel_ci95": [
+        -0.1024,
+        -0.1736,
+        -0.0183
+      ],
+      "params": {
+        "alpha": 10.0
+      },
+      "val_mae": 1.9189,
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season",
+      "model": "hist gradient boosting (tuned)",
+      "split": "test 2003-2007; CV folds 1997-1998, 1999-2000, 2001-2002",
+      "n_train": 5272,
+      "n_test": 1439,
+      "mae": 1.9119,
+      "r2": 0.6686,
+      "target_sd": 4.189,
+      "mae_ci95": [
+        1.8351,
+        1.9948
+      ],
+      "mae_minus_marcel_ci95": [
+        -0.1537,
+        -0.2055,
+        -0.0989
+      ],
+      "seed_mae": [
+        1.9119,
+        1.9119,
+        1.9101,
+        1.9201,
+        1.9125
+      ],
+      "seed_mae_sd": 0.0035,
+      "seed_delta_vs_marcel": [
+        -0.1537,
+        -0.1538,
+        -0.1556,
+        -0.1456,
+        -0.1531
+      ],
+      "params": {
+        "learning_rate": 0.03,
+        "max_leaf_nodes": 31,
+        "min_samples_leaf": 20,
+        "max_iter": 150
+      },
+      "val_mae": 1.8796,
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season",
+      "model": "selected by CV (hist gradient boosting)",
+      "split": "test 2003-2007; CV folds 1997-1998, 1999-2000, 2001-2002",
+      "n_train": 5272,
+      "n_test": 1439,
+      "mae": 1.9119,
+      "r2": 0.6686,
+      "target_sd": 4.189,
+      "mae_ci95": [
+        1.8351,
+        1.9948
+      ],
+      "mae_minus_marcel_ci95": [
+        -0.1537,
+        -0.2055,
+        -0.0989
+      ],
+      "picked": "hist gradient boosting",
+      "params": {
+        "learning_rate": 0.03,
+        "max_leaf_nodes": 31,
+        "min_samples_leaf": 20,
+        "max_iter": 150
+      },
+      "val_mae": 1.8796,
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season",
+      "model": "baseline: last-season PER",
+      "split": "test 2008-2012; CV folds 2002-2003, 2004-2005, 2006-2007",
+      "n_train": 6711,
+      "n_test": 1452,
+      "mae": 2.2836,
+      "r2": 0.4784,
+      "target_sd": 4.212,
+      "mae_ci95": [
+        2.1801,
+        2.3967
+      ],
+      "mae_minus_marcel_ci95": [
+        0.2399,
+        0.1527,
+        0.3337
+      ],
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season",
+      "model": "Marcel-style weighted PER (tuned)",
+      "split": "test 2008-2012; CV folds 2002-2003, 2004-2005, 2006-2007",
+      "n_train": 6711,
+      "n_test": 1452,
+      "mae": 2.0437,
+      "r2": 0.615,
+      "target_sd": 4.212,
+      "mae_ci95": [
+        1.9529,
+        2.1337
+      ],
+      "mae_minus_marcel_ci95": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "params": {
+        "ballast_mp": 2000
+      },
+      "val_mae": 2.0672,
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season",
+      "model": "ridge (tuned)",
+      "split": "test 2008-2012; CV folds 2002-2003, 2004-2005, 2006-2007",
+      "n_train": 6711,
+      "n_test": 1452,
+      "mae": 1.934,
+      "r2": 0.6383,
+      "target_sd": 4.212,
+      "mae_ci95": [
+        1.8429,
+        2.016
+      ],
+      "mae_minus_marcel_ci95": [
+        -0.1097,
+        -0.1722,
+        -0.0486
+      ],
+      "params": {
+        "alpha": 10.0
+      },
+      "val_mae": 1.9465,
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season",
+      "model": "hist gradient boosting (tuned)",
+      "split": "test 2008-2012; CV folds 2002-2003, 2004-2005, 2006-2007",
+      "n_train": 6711,
+      "n_test": 1452,
+      "mae": 1.8784,
+      "r2": 0.6738,
+      "target_sd": 4.212,
+      "mae_ci95": [
+        1.791,
+        1.9614
+      ],
+      "mae_minus_marcel_ci95": [
+        -0.1653,
+        -0.2226,
+        -0.1088
+      ],
+      "seed_mae": [
+        1.8784,
+        1.8822,
+        1.8859,
+        1.8803,
+        1.8811
+      ],
+      "seed_mae_sd": 0.0025,
+      "seed_delta_vs_marcel": [
+        -0.1653,
+        -0.1615,
+        -0.1577,
+        -0.1634,
+        -0.1626
+      ],
+      "params": {
+        "learning_rate": 0.03,
+        "max_leaf_nodes": 7,
+        "min_samples_leaf": 100,
+        "max_iter": 500
+      },
+      "val_mae": 1.8902,
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season",
+      "model": "selected by CV (hist gradient boosting)",
+      "split": "test 2008-2012; CV folds 2002-2003, 2004-2005, 2006-2007",
+      "n_train": 6711,
+      "n_test": 1452,
+      "mae": 1.8784,
+      "r2": 0.6738,
+      "target_sd": 4.212,
+      "mae_ci95": [
+        1.791,
+        1.9614
+      ],
+      "mae_minus_marcel_ci95": [
+        -0.1653,
+        -0.2226,
+        -0.1088
+      ],
+      "picked": "hist gradient boosting",
+      "params": {
+        "learning_rate": 0.03,
+        "max_leaf_nodes": 7,
+        "min_samples_leaf": 100,
+        "max_iter": 500
+      },
+      "val_mae": 1.8902,
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season",
+      "model": "baseline: last-season PER",
+      "split": "test 2013-2017; CV folds 2007-2008, 2009-2010, 2011-2012",
+      "n_train": 8163,
+      "n_test": 1550,
+      "mae": 2.3112,
+      "r2": 0.4912,
+      "target_sd": 4.259,
+      "mae_ci95": [
+        2.2026,
+        2.4267
+      ],
+      "mae_minus_marcel_ci95": [
+        0.2572,
+        0.1712,
+        0.3472
+      ],
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season",
+      "model": "Marcel-style weighted PER (tuned)",
+      "split": "test 2013-2017; CV folds 2007-2008, 2009-2010, 2011-2012",
+      "n_train": 8163,
+      "n_test": 1550,
+      "mae": 2.054,
+      "r2": 0.6244,
+      "target_sd": 4.259,
+      "mae_ci95": [
+        1.9669,
+        2.1456
+      ],
+      "mae_minus_marcel_ci95": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "params": {
+        "ballast_mp": 2000
+      },
+      "val_mae": 2.0572,
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season",
+      "model": "ridge (tuned)",
+      "split": "test 2013-2017; CV folds 2007-2008, 2009-2010, 2011-2012",
+      "n_train": 8163,
+      "n_test": 1550,
+      "mae": 1.9811,
+      "r2": 0.6315,
+      "target_sd": 4.259,
+      "mae_ci95": [
+        1.8913,
+        2.0705
+      ],
+      "mae_minus_marcel_ci95": [
+        -0.0729,
+        -0.1404,
+        -0.0068
+      ],
+      "params": {
+        "alpha": 100.0
+      },
+      "val_mae": 1.9469,
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season",
+      "model": "hist gradient boosting (tuned)",
+      "split": "test 2013-2017; CV folds 2007-2008, 2009-2010, 2011-2012",
+      "n_train": 8163,
+      "n_test": 1550,
+      "mae": 1.9242,
+      "r2": 0.669,
+      "target_sd": 4.259,
+      "mae_ci95": [
+        1.8474,
+        2.0069
+      ],
+      "mae_minus_marcel_ci95": [
+        -0.1297,
+        -0.1887,
+        -0.0727
+      ],
+      "seed_mae": [
+        1.9242,
+        1.9221,
+        1.9143,
+        1.9189,
+        1.9272
+      ],
+      "seed_mae_sd": 0.0044,
+      "seed_delta_vs_marcel": [
+        -0.1297,
+        -0.1318,
+        -0.1397,
+        -0.1351,
+        -0.1268
+      ],
+      "params": {
+        "learning_rate": 0.1,
+        "max_leaf_nodes": 7,
+        "min_samples_leaf": 100,
+        "max_iter": 150
+      },
+      "val_mae": 1.8866,
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season",
+      "model": "selected by CV (hist gradient boosting)",
+      "split": "test 2013-2017; CV folds 2007-2008, 2009-2010, 2011-2012",
+      "n_train": 8163,
+      "n_test": 1550,
+      "mae": 1.9242,
+      "r2": 0.669,
+      "target_sd": 4.259,
+      "mae_ci95": [
+        1.8474,
+        2.0069
+      ],
+      "mae_minus_marcel_ci95": [
+        -0.1297,
+        -0.1887,
+        -0.0727
+      ],
+      "picked": "hist gradient boosting",
+      "params": {
+        "learning_rate": 0.1,
+        "max_leaf_nodes": 7,
+        "min_samples_leaf": 100,
+        "max_iter": 150
+      },
+      "val_mae": 1.8866,
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season_pooled",
+      "model": "baseline: last-season PER",
+      "split": "all test windows (2003-2007, 2008-2012, 2013-2017)",
+      "n_train": 0,
+      "n_test": 4441,
+      "mae": 2.3097,
+      "r2": 0.3562,
+      "target_sd": 4.224,
+      "mae_ci95": [
+        2.239,
+        2.3935
+      ],
+      "mae_minus_marcel_ci95": [
+        0.2553,
+        0.1887,
+        0.3243
+      ],
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season_pooled",
+      "model": "Marcel-style weighted PER (tuned)",
+      "split": "all test windows (2003-2007, 2008-2012, 2013-2017)",
+      "n_train": 0,
+      "n_test": 4441,
+      "mae": 2.0544,
+      "r2": 0.6179,
+      "target_sd": 4.224,
+      "mae_ci95": [
+        2.006,
+        2.1021
+      ],
+      "mae_minus_marcel_ci95": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season_pooled",
+      "model": "ridge (tuned)",
+      "split": "all test windows (2003-2007, 2008-2012, 2013-2017)",
+      "n_train": 0,
+      "n_test": 4441,
+      "mae": 1.9599,
+      "r2": 0.6215,
+      "target_sd": 4.224,
+      "mae_ci95": [
+        1.9036,
+        2.0123
+      ],
+      "mae_minus_marcel_ci95": [
+        -0.0945,
+        -0.1365,
+        -0.0542
+      ],
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season_pooled",
+      "model": "hist gradient boosting (tuned)",
+      "split": "all test windows (2003-2007, 2008-2012, 2013-2017)",
+      "n_train": 0,
+      "n_test": 4441,
+      "mae": 1.9052,
+      "r2": 0.6708,
+      "target_sd": 4.224,
+      "mae_ci95": [
+        1.8591,
+        1.9546
+      ],
+      "mae_minus_marcel_ci95": [
+        -0.1492,
+        -0.1804,
+        -0.1157
+      ],
+      "eval_filter": "player logged >= 500 MP in target season"
+    },
+    {
+      "experiment": "next_season_pooled",
+      "model": "selected by CV",
+      "split": "all test windows (2003-2007, 2008-2012, 2013-2017)",
+      "n_train": 0,
+      "n_test": 4441,
+      "mae": 1.9052,
+      "r2": 0.6708,
+      "target_sd": 4.224,
+      "mae_ci95": [
+        1.8591,
+        1.9546
+      ],
+      "mae_minus_marcel_ci95": [
+        -0.1492,
+        -0.1804,
+        -0.1157
+      ],
+      "eval_filter": "player logged >= 500 MP in target season"
+    }
+  ]
+}

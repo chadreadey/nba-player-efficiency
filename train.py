@@ -27,8 +27,12 @@ def run(source: str, test_from: int) -> dict:
         rows += ex.replicate()
     rows += ex.box_score_only(source, test_from)
     rows += ex.same_season_oot(source, test_from)
-    ns_rows, sweeps = ex.next_season(source)
+    ns_rows, sweeps, preds = ex.next_season(source)
     rows += ns_rows
+    # Player-level rows derive from upstream data, so they stay in gitignored data/derived/.
+    derived = ROOT / "data" / "derived"
+    derived.mkdir(parents=True, exist_ok=True)
+    preds.to_csv(derived / f"{source}_next_season_predictions.csv", index=False)
     return {
         "source": source,
         "dataset": data.KAGGLE_DATASETS[source],

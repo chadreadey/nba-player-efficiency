@@ -1,7 +1,7 @@
-# NBA PER refresh: findings and plan (2026-10-24)
+# NBA PER refresh: findings and plan (started 2026-10-24, updated 2026-10-26)
 
-Status: the local scripts run; nothing is pushed and no Modal resources have been created.
-Every number below comes from `results/legacy.md` and `results/bbref.md`, which `train.py` produced.
+Status: the refresh was pushed 2026-10-25 (commit b666f82). The `exp`-leak correction in section 3 is local and not yet pushed. No Modal resources have been created.
+Every number below comes from `results/legacy.md`, `results/bbref.md` and `results/bbref_diagnostics.md`, which `train.py` and `diagnostics.py` produced.
 
 ## 1. What the 2023 notebook actually measured
 
@@ -41,50 +41,62 @@ Summary (links and licence labels are in the README's "Data and terms" section):
 - age and years of experience
 - season t rates and composites, and per-36 box score
 
+**Correction (2026-10-26):**
+- **The bug:** on the bbref data, the `exp` (prior seasons) feature was computed with `cumcount` in file order, and the bbref files list the newest seasons first. So `exp` counted a player's *future* seasons: a leak, and a feature whose distribution shifted in the latest window.
+- **The fix:** sort by player and season before counting.
+- **What changed:** ridge and gradient-boosting numbers on bbref. Everything quoted before this date for those models on bbref is superseded.
+- **Unchanged:** the legacy results, which are byte-identical after the rerun, and the Marcel and last-season baselines, which don't use `exp`.
+
 **Protocol (rolling-origin backtest):**
 - Data: Kaggle `sumitrodatta/nba-aba-baa-stats` **v56**, pinned and verified against a sha256 checksum on every load.
 - Four 5-season test windows: 2007–11, 2012–16, 2017–21 and 2022–26.
 - For each window, settings are chosen by **rolling-origin CV**: three 2-season folds just before the window, each fit only on seasons before itself, scored by mean fold MAE.
-- The chosen setting is refit on every season before the window and scored **once** on it.
-- Marcel (ballast), ridge and gradient boosting all compete on the same CV score. The winner in each window is the **"selected by CV"** model, the protocol's honest pick.
+- Marcel (ballast), ridge and gradient boosting compete on that CV score, and the winner is "selected by CV". Its setting is refit on all earlier seasons and scored once on the window.
 - Sweeps:
-  - Marcel ballast: 8 values, 250–6,000 minutes
+  - Marcel ballast: 8 values
   - ridge alpha: 17 values, 1e-4 to 1e4
   - gradient boosting: 24 combinations, with 80% feature subsampling
-- The chosen gradient-boosting setting is refit with 5 seeds (0–4).
-- Everything runs locally (the new-data run took about 6 minutes). Full sweeps are in `results/bbref_sweep.json`.
+- The chosen gradient-boosting setting is refit with 5 seeds; its test MAE varies by at most 0.011 in any window.
 
-Scored on players with at least 500 MP in the target season. Δ is the MAE minus the tuned Marcel baseline's MAE: paired, with a 95% player-cluster bootstrap CI, and negative means better.
+Results after the fix, scored on players with at least 500 MP in the target season. Δ is the MAE minus the tuned Marcel baseline's MAE: paired, with a 95% player-cluster bootstrap CI, and negative means better.
 
-| test window | n | Marcel (tuned) MAE | ridge MAE (Δ) | gradient boosting MAE (Δ) | selected by CV |
+| test window | n | Marcel MAE | ridge MAE (Δ) | gradient boosting MAE (Δ) | selected by CV |
 |---|---|---|---|---|---|
-| 2007–11 | 1,450 | 2.024 | 1.842 (−0.183, CI −0.261 to −0.091) | 1.829 (−0.195, CI −0.253 to −0.139) | gradient boosting |
-| 2012–16 | 1,531 | 2.087 | 1.901 (−0.186, CI −0.256 to −0.126) | 1.880 (−0.207, CI −0.271 to −0.150) | gradient boosting |
-| 2017–21 | 1,560 | 2.075 | 2.012 (−0.063, CI −0.126 to +0.004) | 1.944 (−0.131, CI −0.187 to −0.073) | gradient boosting |
-| 2022–26 | 1,643 | 1.911 | 1.826 (−0.085, CI −0.139 to −0.031) | 1.977 (**+0.067**, CI +0.001 to +0.133) | gradient boosting |
-| **pooled** | 6,184 | 2.022 | 1.895 (−0.127, CI −0.159 to −0.091) | 1.910 (−0.112, CI −0.143 to −0.080) | **1.910 (−0.112, CI −0.143 to −0.080)** |
+| 2007–11 | 1,450 | 2.024 | 1.915 (−0.109, CI −0.183 to −0.015) | 1.874 (−0.150, CI −0.207 to −0.097) | gradient boosting |
+| 2012–16 | 1,531 | 2.087 | 1.972 (−0.116, CI −0.181 to −0.062) | 1.923 (−0.164, CI −0.222 to −0.112) | gradient boosting |
+| 2017–21 | 1,560 | 2.075 | 2.050 (−0.025, CI −0.091 to +0.046) | 1.959 (−0.116, CI −0.178 to −0.056) | gradient boosting |
+| 2022–26 | 1,643 | 1.911 | 1.825 (−0.086, CI −0.143 to −0.029) | 1.769 (−0.141, CI −0.199 to −0.090) | gradient boosting |
+| **pooled** | 6,184 | 2.022 | 1.939 (−0.083, CI −0.117 to −0.049) | 1.880 (−0.143, CI −0.170 to −0.116) | **1.880 (−0.143, CI −0.170 to −0.116)** |
 
-For reference, last season's PER alone scores a pooled MAE of 2.249, which is worse than Marcel by 0.227.
+- **Last-season PER alone:** pooled MAE 2.249.
+- **Legacy data (test windows 2003–07, 2008–12, 2013–17):** the selected model beats Marcel in all three, pooled Δ −0.149 (95% CI −0.180 to −0.116).
+- **What the bug did:** before the fix, gradient boosting looked better in the early windows and lost to Marcel in 2022–26. The leaked "future seasons" signal helped where there were many future seasons to count, and broke where there weren't.
 
-**Seeds:** gradient-boosting test MAE varies by at most 0.039 across the 5 seeds in any window (SD 0.002–0.012). Seed noise doesn't explain any of the window results; in 2022–26 every seed is worse than Marcel (by +0.049 to +0.088).
+**Noise ceiling and error breakdown (`diagnostics.py`, `results/bbref_diagnostics.md`):**
+- **Noise model:** observed PER = true PER + noise with variance k/MP. It is fit from the variance of age-demeaned year-to-year PER changes against 1/MP_t + 1/MP_t+1 (20 quantile bins, WLS).
+- **Stable across choices:** k = 2,007–2,522 across minutes floors (100/250/500) and plain vs robust variance. That is a noise SD of about 1.4–1.6 PER at 1,000 MP.
+- **Oracle noise floor** on the test set (knows true next-season talent): MAE about **1.05** (0.96–1.07 across fits).
+- **Static-talent oracle** (knows current true talent plus average aging, nothing about change): MAE about 1.70. The selected model's 1.88 is above it.
+- **Noise share:** measurement noise is 32% of the selected model's MSE (1.848 of 5.781).
+- **Where the model beats Marcel** (pooled Δ):
+  - age 33+: −0.48
+  - minutes fell below 0.67×: −0.31
+  - age 21 or younger: −0.24
+- **Where it doesn't:**
+  - age 25–28: +0.003, CI −0.031 to +0.036
+  - minutes rose above 1.5×: −0.04, CI −0.115 to +0.023
 
-**Legacy data (test windows 2003–07, 2008–12, 2013–17):**
-- The CV-selected model (gradient boosting in every window) beats Marcel in all three.
-- Pooled Δ is −0.149 (95% CI −0.180 to −0.116), over 4,441 player-seasons.
-
-**The honest reading:**
-- **Real but modest gain.** Across 20 test seasons, the protocol's pick beats a tuned weighted-average baseline by about 0.11 PER MAE, roughly 5–6%.
-- **The latest window is the exception.** In 2022–26, CV still picks gradient boosting, and it is slightly *worse* than the baseline. Ridge beats the baseline there, but choosing ridge because of that would mean selecting on test data.
-- **Untested guess:** the 2022–26 CV folds include the shortened 2019-20 and 2020-21 seasons, which may mislead selection.
-- **Ridge alpha:** the chosen value moves between 1e-4 and 31.6 across windows. In two windows it lands at the low edge (1e-4), meaning effectively plain least squares, so extending the grid lower would change nothing.
+  Those groups are where to look for gains.
+- **Caveat:** the minutes and team groupings use target-season information, so they're diagnostic only.
 
 A portfolio line that holds up:
 
-> "Next-season PER forecast, rolling-origin backtest over four 5-season windows (2007–2026, 6,184 player-seasons), with hyperparameters chosen by time-ordered CV. The selected model (gradient boosting) cut MAE vs a tuned Marcel-style baseline by 0.11 (2.02 → 1.91; 95% CI 0.08–0.14). The gain held in 3 of 4 windows and reversed slightly in 2022–26."
+> "Next-season PER forecast, rolling-origin backtest over four 5-season windows (2007–2026, 6,184 player-seasons), with hyperparameters chosen by time-ordered CV. Gradient boosting cut MAE vs a tuned Marcel-style baseline by 0.14 (2.02 → 1.88; 95% CI 0.12–0.17) and won in every window. An estimated noise floor of about 1.05 shows most of the remaining error is real, unmodelled change in talent and role."
 
 ## 4. Limitations of the current results
 
 - **Selection bias:** next-season rows exist only for players who returned and played at least 500 minutes. That conditions on the future, so the results don't cover players who left the league or got hurt.
+- **Rough noise model.** It assumes noise variance proportional to 1/MP with normal errors. If low-minute players also change more in true talent, k is overstated and the floor is optimistic.
 - **Modest search.** The sweeps are small grids. Seeds only matter for gradient boosting, and their spread is reported.
 - **Same-season experiments are untuned.** They use fixed hyperparameters, which is fine because they only demonstrate leakage.
 - **Snapshot timing:** the 2025-26 rows come from v56, a snapshot taken 2026-04-13, a day after the regular season ended. The minute-weighted league PER is 15.00 for every test season, which is consistent with final data.
@@ -96,9 +108,16 @@ A portfolio line that holds up:
 1. ~~Pick the target and data source~~ (done: next-season PER on sumitrodatta). Still open: Chad confirms he's comfortable with Sports Reference item 11.
 2. ~~Pin the dataset version, add a validation window and a tuning sweep~~ (done; it runs locally in about 1.5 minutes per source).
 3. ~~Rolling-origin validation, wider ridge grid, multiple seeds~~ (done locally).
-4. **(Needs approval: paid)** Modal is optional: the full backtest runs locally in about 6 minutes. It would only matter for much bigger sweeps, for example more windows, feature ablations, or a minutes-forecast model to address the selection bias. Command: `modal run modal_app.py --source bbref` (CPU only: 4 vCPU, 4 GB, 30-minute timeout).
-5. Rewrite the README with the leakage story and the honest results table. Keep the 2023 notebook as the "original" and credit its authors.
-6. **(Needs approval)** Commit and push to `chadreadey/nba-player-efficiency`.
+   - ~~Noise ceiling and error breakdown~~ (done; it found and fixed the `exp` leak).
+   - Next modelling step, not started:
+     - predict the residual on Marcel
+     - shooting-luck and role-change features (offseason team change, draft position)
+     - a ridge plus gradient-boosting average
+     - minutes weighting
+     - target groups: prime-age players and players about to earn a bigger role
+4. **(Needs approval: paid)** Modal is optional: the full backtest runs locally in about 7 minutes. It would only matter for much bigger sweeps, for example more windows, feature ablations, or a minutes-forecast model to address the selection bias. Command: `modal run modal_app.py --source bbref` (CPU only: 4 vCPU, 4 GB, 30-minute timeout).
+5. ~~Rewrite the README~~ (done; updated 2026-10-26 with the correction and the noise ceiling).
+6. ~~Commit and push~~ (b666f82). **(Needs approval)** Commit and push the `exp` correction and the diagnostics.
 
 ## Reproduce
 

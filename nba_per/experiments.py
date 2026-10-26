@@ -143,6 +143,9 @@ def same_season_oot(source, test_from) -> list[dict]:
 def next_season_frame(source):
     df = data.load(source)
     df = df[df.season >= 1978].copy()  # turnovers recorded from 1977-78
+    # Sort first: cumcount follows row order, and the bbref files are newest-first, which
+    # previously made exp count *future* seasons (a leak).
+    df = df.sort_values(["player_key", "season"]).reset_index(drop=True)
     df["exp"] = df.groupby("player_key").cumcount()
     for c, v in per36(df).items():
         df[f"{c}_36"] = v
@@ -157,13 +160,17 @@ def next_season_frame(source):
     X = cur.merge(lag(1), on=["player_key", "season"], how="left", suffixes=("", "_l1"))
     X = X.merge(lag(2), on=["player_key", "season"], how="left", suffixes=("", "_l2"))
 
-    tgt = df[["player_key", "season", "per", "mp"]].rename(columns={"per": "per_next", "mp": "mp_next"})
+    X = X.merge(df[["player_key", "season", "team"]], on=["player_key", "season"], how="left")
+    tgt = df[["player_key", "season", "per", "mp", "gs", "team"]].rename(
+        columns={"per": "per_next", "mp": "mp_next", "gs": "gs_next", "team": "team_next"})
     tgt["season"] -= 1  # align season t+1 target with season t features
     out = X.merge(tgt, on=["player_key", "season"], how="inner")
     out["target_season"] = out.season + 1
     out = out[(out.mp_next >= MIN_MP_TARGET) & (out.target_season >= 1981) & out.per_next.notna()]
+    # team / *_next columns are kept for error diagnostics only, never as features
     feats = [c for c in out.columns
-             if c not in ("player_key", "player", "season", "per_next", "mp_next", "target_season")]
+             if c not in ("player_key", "player", "season", "per_next", "mp_next", "gs_next",
+                          "team", "team_next", "target_season")]
     return out.reset_index(drop=True), feats
 
 
@@ -228,11 +235,18 @@ def tune(name, df, feats, test_from):
     return {k: v for k, v in best.items() if k not in ("fold_mae", "val_mae")}, best["val_mae"], sweep
 
 
-def next_season(source) -> tuple[list[dict], dict]:
-    """Backtest over several test windows, tuning each by rolling-origin CV on prior seasons only."""
+DIAG_COLS = ["player_key", "player", "target_season", "age", "exp", "mp", "gs", "per",
+             "per_next", "mp_next", "gs_next", "team", "team_next"]
+
+
+def next_season(source) -> tuple[list[dict], dict, pd.DataFrame]:
+    """Backtest over several test windows, tuning each by rolling-origin CV on prior seasons only.
+
+    Returns result rows, the sweeps, and per-row test predictions for diagnostics.
+    """
     df, feats = next_season_frame(source)
     filt = dict(eval_filter=f"player logged >= {MIN_MP_TARGET} MP in target season")
-    rows, sweeps = [], {}
+    rows, sweeps, diag = [], {}, []
     pooled = {"y": [], "g": [], "ref": [], "preds": {}}
 
     for t in TEST_WINDOWS[source]:
@@ -273,6 +287,9 @@ def next_season(source) -> tuple[list[dict], dict]:
                               mae_minus_marcel_ci95=paired_delta_ci(te.per_next, p, ref, g),
                               **extra, **filt))
             pooled["preds"].setdefault(name, []).append(np.asarray(p))
+        diag.append(te[DIAG_COLS].assign(
+            window=f"{t}-{t + WINDOW - 1}", picked=picked,
+            **{f"pred_{n}": np.asarray(p) for n, (p, _, _) in preds.items()}))
         pooled["y"].append(te.per_next.values)
         pooled["g"].append(g.values)
         pooled["ref"].append(np.asarray(ref))
@@ -283,4 +300,4 @@ def next_season(source) -> tuple[list[dict], dict]:
         p = np.concatenate(parts)
         rows.append(score("next_season_pooled", name, y, p, 0, f"all test windows ({windows})", g,
                           mae_minus_marcel_ci95=paired_delta_ci(y, p, ref, g), **filt))
-    return rows, sweeps
+    return rows, sweeps, pd.concat(diag, ignore_index=True)
